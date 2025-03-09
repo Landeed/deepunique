@@ -68,13 +68,16 @@ func deepValueMake(value reflect.Value) any {
 		}
 	case reflect.Map:
 		items := make([][2]any, value.Len())
+		index := make([]string, value.Len())
 		iter := value.MapRange()
 		for iter.Next() {
-			// I think map keys have to be comparable, but using deepValueMake to be safe.
-			key := deepValueMake(iter.Key())
+			// Map keys are comparable, but two different keys can compare equal.
+			key := NewSerializableHandle(iter.Key())
 			val := deepValueMake(iter.Value())
 			items = append(items, [2]any{key, val})
+			index = append(index, key.Value)
 		}
+		SortMapTuples(items, index)
 		return TypedAny{
 			Type:  NewSerializableHandle(value.Type()),
 			Value: items,

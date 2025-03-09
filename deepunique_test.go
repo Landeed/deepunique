@@ -3,6 +3,7 @@ package deepunique
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 	"unique"
@@ -512,6 +513,70 @@ func TestUniqueTypedAny(t *testing.T) {
 					t.Errorf("expected %v, got %v", tt.expected, result)
 					break
 				}
+			}
+		})
+	}
+}
+
+func TestTypeCompare(t *testing.T) {
+	// Shows that we need to sort maps by handle pointer string, not just value.
+	// We know map keys are comparable, so we don't need full json serialization.
+
+	if 'a' != 97 {
+		t.Errorf("Expected 'a' to be equal to 97 in simple comparison")
+	}
+
+	handle1 := unique.Make('a')
+	handle2 := unique.Make(97)
+	str1 := fmt.Sprintf("%v", handle1)
+	str2 := fmt.Sprintf("%v", handle2)
+	if str1 == str2 {
+		t.Errorf("Expected str1 and str2 to be different, got %v", str1)
+	}
+
+	// operator not defined on interface
+	//deep1 := deepValueMake(reflect.ValueOf('a'))
+	//deep2 := deepValueMake(reflect.ValueOf(97))
+
+	// invalid operation: typedAny1 > typedAny2 (operator > not defined on struct)
+	/*
+		typedAny1 := TypedAny{
+			Type:  NewSerializableHandle(reflect.TypeOf('a')),
+			Value: handle1,
+		}
+		typedAny2 := TypedAny{
+			Type:  NewSerializableHandle(reflect.TypeOf(97)),
+			Value: handle2,
+		}
+	*/
+}
+
+func TestMapDeepEqual(t *testing.T) {
+	alice := "Alice"
+	otherAlice := "Alice"
+
+	tests := []struct {
+		name     string
+		map1     map[*string]int
+		map2     map[*string]int
+		expected bool
+	}{
+		{
+			name: "Maps with keys that are pointers to the same value are not deep equal",
+			map1: map[*string]int{
+				&alice: 1,
+			},
+			map2: map[*string]int{
+				&otherAlice: 1,
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if reflect.DeepEqual(tt.map1, tt.map2) != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, reflect.DeepEqual(tt.map1, tt.map2))
 			}
 		})
 	}
